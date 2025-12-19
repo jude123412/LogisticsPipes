@@ -8,6 +8,19 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
+import com.cleanroommc.modularui.widgets.layout.Column;
+import com.cleanroommc.modularui.widgets.layout.Row;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+import logisticspipes.api.IMUICompatiblePipe;
+import logisticspipes.compat.ModularUIHelper;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
@@ -45,8 +58,9 @@ import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.Pair;
 
+@Log4j2
 public class PipeFluidSatellite extends FluidRoutedPipe implements IRequestFluid, IRequireReliableFluidTransport,
-        IHeadUpDisplayRendererProvider, IChestContentReceiver {
+    IMUICompatiblePipe, IChestContentReceiver {
 
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     public final LinkedList<ItemIdentifierStack> itemList = new LinkedList<>();
@@ -56,6 +70,42 @@ public class PipeFluidSatellite extends FluidRoutedPipe implements IRequestFluid
     public PipeFluidSatellite(Item item) {
         super(item);
         throttleTime = 40;
+    }
+
+    @Override
+    public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager) {
+        panel.background(ModularUIHelper.BACKGROUND_TEXTURE).child(
+            new Column().widthRel(1.0f).top(6).coverChildrenHeight()
+                .child(
+                    new Row()
+                        .marginTop(5).mainAxisAlignment(Alignment.MainAxis.CENTER)
+                        .crossAxisAlignment(Alignment.CrossAxis.CENTER).widthRel(
+                            1.0F)
+                        .coverChildrenHeight().child(IKey.lang("gui.satellite.SatelliteID").asWidget()))
+                .child(
+                    new Column().widthRel(1.0f).top(6).coverChildrenHeight().child(
+                        new Row().marginTop(15).mainAxisAlignment(Alignment.MainAxis.CENTER)
+                            .coverChildrenHeight().child(
+                                new TextFieldWidget().width(60).setNumbers(0, Integer.MAX_VALUE)
+                                    .value(
+                                        SyncHandlers.intNumber(
+                                            () -> this.satelliteId,
+                                            value -> this.satelliteId = value))))));
+    }
+
+    @Override
+    public String getId() {
+        return "satelite_pipe";
+    }
+
+    @Override
+    public int getGuiWidth() {
+        return 116;
+    }
+
+    @Override
+    public int getGuiHeight() {
+        return 70;
     }
 
     @Override
@@ -144,25 +194,6 @@ public class PipeFluidSatellite extends FluidRoutedPipe implements IRequestFluid
     }
 
     @Override
-    public IHeadUpDisplayRenderer getRenderer() {
-        return HUD;
-    }
-
-    @Override
-    public void startWatching() {
-        MainProxy.sendPacketToServer(
-                PacketHandler.getPacket(HUDStartWatchingPacket.class).setInteger(1).setPosX(getX()).setPosY(getY())
-                        .setPosZ(getZ()));
-    }
-
-    @Override
-    public void stopWatching() {
-        MainProxy.sendPacketToServer(
-                PacketHandler.getPacket(HUDStopWatchingPacket.class).setInteger(1).setPosX(getX()).setPosY(getY())
-                        .setPosZ(getZ()));
-    }
-
-    @Override
     public void playerStartWatching(EntityPlayer player, int mode) {
         if (mode == 1) {
             localModeWatchers.add(player);
@@ -191,6 +222,7 @@ public class PipeFluidSatellite extends FluidRoutedPipe implements IRequestFluid
 
     protected final Map<FluidIdentifier, Integer> _lostItems = new HashMap<>();
 
+    @Setter
     public int satelliteId;
 
     @Override
@@ -291,7 +323,7 @@ public class PipeFluidSatellite extends FluidRoutedPipe implements IRequestFluid
         final ModernPacket packet = PacketHandler.getPacket(SatPipeSetID.class).setSatID(satelliteId).setPosX(getX())
                 .setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(packet, entityplayer);
-        entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_SatelitePipe_ID, getWorld(), getX(), getY(), getZ());
+        openGui(entityplayer, this);
     }
 
     @Override
@@ -313,10 +345,6 @@ public class PipeFluidSatellite extends FluidRoutedPipe implements IRequestFluid
                 }
             }
         }
-    }
-
-    public void setSatelliteId(int integer) {
-        satelliteId = integer;
     }
 
     @Override

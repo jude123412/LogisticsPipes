@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import lombok.extern.log4j.Log4j2;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
@@ -61,6 +62,7 @@ import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.LPPosition;
 import lombok.Setter;
 
+@Log4j2
 public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
         implements IRequestItems, IRequireReliableTransport, IMUICompatiblePipe, IChestContentReceiver {
 
@@ -358,7 +360,7 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
         final ModernPacket packet = PacketHandler.getPacket(SatPipeSetID.class).setSatID(satelliteId).setPosX(getX())
                 .setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(packet, entityplayer);
-        openGui(entityplayer, this);
+         openGui(entityplayer, this);
     }
 
     @Override
