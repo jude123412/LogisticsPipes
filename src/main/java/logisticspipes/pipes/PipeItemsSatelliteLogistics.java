@@ -223,6 +223,7 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
 
     protected final LinkedList<ItemIdentifierStack> _lostItems = new LinkedList<>();
 
+    @Setter
     public int satelliteId;
 
     @Override
