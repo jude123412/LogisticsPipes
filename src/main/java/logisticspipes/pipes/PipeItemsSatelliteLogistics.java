@@ -357,9 +357,7 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
         final ModernPacket packet = PacketHandler.getPacket(SatPipeSetID.class).setSatID(satelliteId).setPosX(getX())
                 .setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(packet, entityplayer);
-        entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_SatelitePipe_ID, getWorld(), getX(), getY(), getZ());
         openGui(entityplayer, this);
-    }
     }
 
     @Override
