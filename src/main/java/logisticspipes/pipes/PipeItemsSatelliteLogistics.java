@@ -20,11 +20,20 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentTranslation;
 import net.minecraftforge.common.util.ForgeDirection;
 
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
+import com.cleanroommc.modularui.widgets.layout.Column;
+import com.cleanroommc.modularui.widgets.layout.Row;
+import com.cleanroommc.modularui.widgets.textfield.TextFieldWidget;
+
 import logisticspipes.LogisticsPipes;
-import logisticspipes.gui.hud.HUDSatellite;
+import logisticspipes.api.IMUICompatiblePipe;
+import logisticspipes.compat.ModularUIHelper;
 import logisticspipes.interfaces.IChestContentReceiver;
-import logisticspipes.interfaces.IHeadUpDisplayRenderer;
-import logisticspipes.interfaces.IHeadUpDisplayRendererProvider;
 import logisticspipes.interfaces.routing.IAdditionalTargetInformation;
 import logisticspipes.interfaces.routing.IRequestItems;
 import logisticspipes.interfaces.routing.IRequireReliableTransport;
@@ -32,12 +41,9 @@ import logisticspipes.items.ItemModule;
 import logisticspipes.logisticspipes.ItemModuleInformationManager;
 import logisticspipes.modules.ModuleSatelite;
 import logisticspipes.modules.abstractmodules.LogisticsModule;
-import logisticspipes.network.GuiIDs;
 import logisticspipes.network.PacketHandler;
 import logisticspipes.network.abstractpackets.ModernPacket;
 import logisticspipes.network.packets.hud.ChestContent;
-import logisticspipes.network.packets.hud.HUDStartWatchingPacket;
-import logisticspipes.network.packets.hud.HUDStopWatchingPacket;
 import logisticspipes.network.packets.satpipe.SatPipeNext;
 import logisticspipes.network.packets.satpipe.SatPipePrev;
 import logisticspipes.network.packets.satpipe.SatPipeSetID;
@@ -53,18 +59,54 @@ import logisticspipes.utils.PlayerCollectionList;
 import logisticspipes.utils.SidedInventoryMinecraftAdapter;
 import logisticspipes.utils.item.ItemIdentifierStack;
 import logisticspipes.utils.tuples.LPPosition;
+import lombok.Setter;
 
 public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
-        implements IRequestItems, IRequireReliableTransport, IHeadUpDisplayRendererProvider, IChestContentReceiver {
+        implements IRequestItems, IRequireReliableTransport, IMUICompatiblePipe, IChestContentReceiver {
 
     public final PlayerCollectionList localModeWatchers = new PlayerCollectionList();
     public final LinkedList<ItemIdentifierStack> itemList = new LinkedList<>();
     public final LinkedList<ItemIdentifierStack> oldList = new LinkedList<>();
-    private final HUDSatellite HUD = new HUDSatellite(this);
 
     public PipeItemsSatelliteLogistics(Item item) {
         super(item);
         throttleTime = 40;
+    }
+
+    @Override
+    public void addUIWidgets(ModularPanel panel, PosGuiData data, PanelSyncManager syncManager) {
+        panel.background(ModularUIHelper.BACKGROUND_TEXTURE).child(
+                new Column().widthRel(1.0f).top(6).coverChildrenHeight()
+                        .child(
+                                new Row()
+                                        .marginTop(5).mainAxisAlignment(Alignment.MainAxis.CENTER)
+                                        .crossAxisAlignment(Alignment.CrossAxis.CENTER).widthRel(
+                                                1.0F)
+                                        .coverChildrenHeight().child(IKey.lang("gui.satellite.SatelliteID").asWidget()))
+                        .child(
+                                new Column().widthRel(1.0f).top(6).coverChildrenHeight().child(
+                                        new Row().marginTop(15).mainAxisAlignment(Alignment.MainAxis.CENTER)
+                                                .coverChildrenHeight().child(
+                                                        new TextFieldWidget().width(60).setNumbers(0, Integer.MAX_VALUE)
+                                                                .value(
+                                                                        SyncHandlers.intNumber(
+                                                                                () -> this.satelliteId,
+                                                                                value -> this.satelliteId = value))))));
+    }
+
+    @Override
+    public String getId() {
+        return "satelite_pipe";
+    }
+
+    @Override
+    public int getGuiWidth() {
+        return 116;
+    }
+
+    @Override
+    public int getGuiHeight() {
+        return 70;
     }
 
     @Override
@@ -88,20 +130,6 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
     @Override
     public ItemSendMode getItemSendMode() {
         return ItemSendMode.Normal;
-    }
-
-    @Override
-    public void startWatching() {
-        MainProxy.sendPacketToServer(
-                PacketHandler.getPacket(HUDStartWatchingPacket.class).setInteger(1).setPosX(getX()).setPosY(getY())
-                        .setPosZ(getZ()));
-    }
-
-    @Override
-    public void stopWatching() {
-        MainProxy.sendPacketToServer(
-                PacketHandler.getPacket(HUDStopWatchingPacket.class).setInteger(1).setPosX(getX()).setPosY(getY())
-                        .setPosZ(getZ()));
     }
 
     private IInventory getRawInventory(ForgeDirection ori) {
@@ -184,11 +212,6 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
     public void setReceivedChestContent(Collection<ItemIdentifierStack> list) {
         itemList.clear();
         itemList.addAll(list);
-    }
-
-    @Override
-    public IHeadUpDisplayRenderer getRenderer() {
-        return HUD;
     }
 
     public static Set<PipeItemsSatelliteLogistics> AllSatellites = Collections.newSetFromMap(new WeakHashMap<>());
@@ -335,6 +358,8 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
                 .setPosY(getY()).setPosZ(getZ());
         MainProxy.sendPacketToPlayer(packet, entityplayer);
         entityplayer.openGui(LogisticsPipes.instance, GuiIDs.GUI_SatelitePipe_ID, getWorld(), getX(), getY(), getZ());
+        openGui(entityplayer, this);
+    }
     }
 
     @Override
@@ -365,7 +390,4 @@ public class PipeItemsSatelliteLogistics extends CoreRoutedPipe
     @Override
     public void itemArrived(ItemIdentifierStack item, IAdditionalTargetInformation info) {}
 
-    public void setSatelliteId(int integer) {
-        satelliteId = integer;
-    }
 }
